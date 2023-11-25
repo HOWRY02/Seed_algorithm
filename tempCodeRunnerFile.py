@@ -1,0 +1,1 @@
+weight_of_cart < 60

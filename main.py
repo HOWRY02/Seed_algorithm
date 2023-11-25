@@ -22,13 +22,13 @@ class BatchesGenerating():
             # length of aisle (m)
             self.L = 3
             # traveling speed of pickers (m/s)
-            self.V_travel = 0.5
+            self.v_travel = 0.5
             # scanning time of each item (s)
             self.t_scan = 2
             # packing time of each order (s)
             self.t_pack = 15
             # the capacity of one picking cart (kg)
-            self.O = 60
+            self.capacity = 60
 
 
     def generate_batches(self, df):
@@ -64,17 +64,19 @@ class BatchesGenerating():
             batch, current_order_pool = select_seed_order(batch, current_order_pool, order_pool, rule_X)
             # select accompanying order
             weight_of_cart = 0
-            while weight_of_cart < self.O:
+            while weight_of_cart < 60:
                 if len(current_order_pool) == 0:
                     break
 
-                batch, current_order_pool = select_accompanying_order(batch, current_order_pool, rule_X)
-                weight_of_cart += order_pool[order_pool['order_id']==batch[-1]]['total_weight']
+                batch, current_order_pool = select_accompanying_order(batch, current_order_pool, df, order_id_df)
+                weight_of_cart += order_pool[order_pool['order_id']==batch[-1]].iloc[0]['total_weight']
             
             rule_X = set_rule_X()
 
             batches.append(batch)
         
+        print(batches)
+
         return batches
 
 

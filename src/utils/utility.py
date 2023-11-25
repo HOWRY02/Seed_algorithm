@@ -44,8 +44,29 @@ def select_seed_order(batch, current_order_pool, order_pool, rule_X):
     return batch, new_current_order_pool
 
 
-def select_accompanying_order(batch, current_order_pool, order_pool, rule_X):
-    pass
+def select_accompanying_order(batch, current_order_pool, df, order_id_df):
+
+    batch_info = order_id_df.loc[batch]
+    aisle_list_of_batch = set(batch_info.ki.unique())
+
+    orders_id = current_order_pool.order_id.unique()
+    list_point = []
+    for order_id in orders_id:
+        order_info = df[df['OrderID']==order_id]
+        aisle_list_of_order = set(order_info.ki.unique())
+        intersection_order_batch = aisle_list_of_order.intersection(aisle_list_of_batch)
+        # print(f'intersection_order_batch: {intersection_order_batch}')
+        union_order_batch = aisle_list_of_order.union(aisle_list_of_batch)
+        # print(f'union_order_batch: {union_order_batch}')
+        sim_i = len(intersection_order_batch)/len(union_order_batch)
+        list_point.append([order_id, sim_i])
+
+    list_point.sort(key = lambda x: x[1], reverse=True)
+    # print(list_point)
+    batch.append(list_point[0][0])
+    new_current_order_pool = current_order_pool.drop(current_order_pool[current_order_pool['order_id']==list_point[0][0]].iloc[0].name)
+
+    return batch, new_current_order_pool
 
 
 def find_picking_time(batch, order_id_df):
