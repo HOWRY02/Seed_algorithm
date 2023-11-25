@@ -1,0 +1,13 @@
+__pycache__
+*/__pycache__
+*/*/__pycache__
+*/*/*/__pycache__
+*/*/*/*/__pycache__
+*/*/*/*/*/__pycache__
+*.png
+*.jpeg
+*.jpg
+*/*/*.pth
+# data*
+result*
+test*
