@@ -1,21 +1,21 @@
 import pandas as pd
-from utils.utility import preprocess_order, select_accompanying_order, find_situation, find_picking_time, find_packing_time
+from utils.utility import preprocess_order, select_accompanying_order, check_situation, find_picking_time, find_packing_time
 
-class BatchesGenerating():
+class BatchesGenerator():
     __instance__ = None
 
     @staticmethod
     def getInstance():
         """ Static access method. """
-        if BatchesGenerating.__instance__ == None:
-            BatchesGenerating()
-        return BatchesGenerating.__instance__
+        if BatchesGenerator.__instance__ == None:
+            BatchesGenerator()
+        return BatchesGenerator.__instance__
     
     def __init__(self):
-        if BatchesGenerating.__instance__ != None:
+        if BatchesGenerator.__instance__ != None:
             raise Exception("Batches Generating is a singleton!")
         else:
-            BatchesGenerating.__instance__ == self
+            BatchesGenerator.__instance__ == self
 
             # center-to-center distance between two aisle (m)
             self.W = 2
@@ -75,8 +75,10 @@ class BatchesGenerating():
                 if len(temp_order_pool) == 0:
                     batch = temp_batch
                     current_order_pool = temp_order_pool
-                    picking_time_list.append(find_picking_time(batch, weight_of_cart, order_id_df, self.W, self.L, self.v_travel))
-                    packing_time_list.append(find_packing_time(batch, weight_of_cart, order_pool, self.t_scan, self.t_pack))
+                    picking_time_list.append(find_picking_time(batch, weight_of_cart, order_id_df,
+                                                               self.W, self.L, self.v_travel))
+                    packing_time_list.append(find_packing_time(batch, weight_of_cart, order_pool,
+                                                               self.t_scan, self.t_pack))
                     break
 
                 accompanying_order = select_accompanying_order(temp_batch, temp_order_pool, df, order_id_df)
@@ -88,10 +90,11 @@ class BatchesGenerating():
                     weight_of_cart = temp_weight_of_cart
 
                 else:
-                    temp_picking_time = find_picking_time(temp_batch, weight_of_cart, order_id_df, self.W, self.L, self.v_travel)
+                    temp_picking_time = find_picking_time(temp_batch, weight_of_cart, order_id_df,
+                                                          self.W, self.L, self.v_travel)
 
-                    situation = find_situation(picking_time_list, packing_time_list,
-                                               temp_picking_time)
+                    situation = check_situation(picking_time_list, packing_time_list,
+                                                temp_picking_time)
 
                     # consider current situation
                     if situation == 'blocking':
@@ -100,8 +103,10 @@ class BatchesGenerating():
                         rule_X = 'rule_A'
                         batch = temp_batch
                         current_order_pool = temp_order_pool
-                        picking_time_list.append(find_picking_time(batch, weight_of_cart, order_id_df, self.W, self.L, self.v_travel))
-                        packing_time_list.append(find_packing_time(batch, weight_of_cart, order_pool, self.t_scan, self.t_pack))
+                        picking_time_list.append(find_picking_time(batch, weight_of_cart, order_id_df,
+                                                                   self.W, self.L, self.v_travel))
+                        packing_time_list.append(find_packing_time(batch, weight_of_cart, order_pool,
+                                                                   self.t_scan, self.t_pack))
 
                     break
 
@@ -149,5 +154,5 @@ class BatchesGenerating():
 
 if __name__ == "__main__":
     df = pd.read_csv('data/order_data.csv')
-    paper_ocr = BatchesGenerating()
+    paper_ocr = BatchesGenerator()
     batch = paper_ocr.generate_batches(df)
