@@ -115,18 +115,18 @@ class BatchesGenerator():
                 batches.append(batch)
                 self.current_num_of_aisle = None
         
-        C_max = sum(packing_time_list) + picking_time_list[0]
-        num_of_item_in_batches = 0
-        for i in batches:
-            num_of_item_in_batches += len(i)
+        
+        # num_of_item_in_batches = 0
+        # for i in batches:
+        #     num_of_item_in_batches += len(i)
+        # C_max = sum(packing_time_list) + picking_time_list[0]
+        # print(f'picking_time_list: {picking_time_list, len(picking_time_list)}')
+        # print(f'packing_time_list: {packing_time_list, len(packing_time_list)}')
+        # print(f'C_max: {C_max}')
+        # print(batches, len(batches))
+        # print(num_of_item_in_batches)
 
-        print(f'picking_time_list: {picking_time_list, len(picking_time_list)}')
-        print(f'packing_time_list: {packing_time_list, len(packing_time_list)}')
-        print(f'C_max: {C_max}')
-        print(batches, len(batches))
-        print(num_of_item_in_batches)
-
-        return batches
+        return batches, picking_time_list, packing_time_list
 
 
     def select_seed_order(self, batches, order_pool, temp_order_pool, rule_X):
