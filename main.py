@@ -1,5 +1,5 @@
 import pandas as pd
-from src.utils.utility import preprocess_order, select_seed_order, select_accompanying_order, set_rule_X, find_picking_time, find_packing_time
+from utils.utility import preprocess_order, select_accompanying_order, find_situation, find_picking_time, find_packing_time
 
 class BatchesGenerating():
     __instance__ = None
@@ -29,10 +29,12 @@ class BatchesGenerating():
             self.t_pack = 15
             # the capacity of one picking cart (kg)
             self.capacity = 60
+            self.current_num_of_aisle = None
 
 
     def generate_batches(self, df):
 
+        # remove all Nan
         df.dropna(inplace=True)
 
         all_order_id = df.OrderID.unique()
@@ -41,44 +43,109 @@ class BatchesGenerating():
         order_id_df = df.copy()
         order_id_df.set_index('OrderID', inplace=True)
         current_order_pool = order_pool.copy()
-        # current_order_pool = current_order_pool.drop(current_order_pool.iloc[0].name)
-        # print(order_id_df)
-        # print(current_order_pool)
-        # print(order_pool.iloc[1]['order_id'])
         
         batches = []
 
         # set the seed-order selection rule
         rule_X = 'rule_A'
 
-        # batch = ['717HD145170', '123HD145170', '130HD145171']
-        # packing_time = find_packing_time(batch, order_pool)
-        # picking_time = find_picking_time(batch, order_id_df)
-        # print(f'packing_time: {packing_time}')
-        # print(f'picking_time: {picking_time}')
+        # set list of time
+        picking_time_list = []
+        packing_time_list = []
 
         while len(current_order_pool) > 0:
-            # create empty bacth
+
+            temp_order_pool = current_order_pool.copy()
+            # create empty batch
             batch = []
+            temp_batch = []
+
             # select seed order
-            batch, current_order_pool = select_seed_order(batch, current_order_pool, order_pool, rule_X)
-            # select accompanying order
-            weight_of_cart = 0
-            while weight_of_cart < 60:
+            seed_order, temp_order_pool = self.select_seed_order(batches, order_pool, temp_order_pool, rule_X)
+            temp_batch.append(seed_order)
+
+            if seed_order is not None:
+                weight_of_cart = order_pool[order_pool['order_id']==temp_batch[-1]].iloc[0]['total_weight']
+            
+            # select accompanying orders
+            while seed_order is not None:
                 if len(current_order_pool) == 0:
                     break
 
-                batch, current_order_pool = select_accompanying_order(batch, current_order_pool, df, order_id_df)
-                weight_of_cart += order_pool[order_pool['order_id']==batch[-1]].iloc[0]['total_weight']
-            
-            rule_X = set_rule_X()
+                if len(temp_order_pool) == 0:
+                    batch = temp_batch
+                    current_order_pool = temp_order_pool
+                    picking_time_list.append(find_picking_time(batch, weight_of_cart, order_id_df, self.W, self.L, self.v_travel))
+                    packing_time_list.append(find_packing_time(batch, weight_of_cart, order_pool, self.t_scan, self.t_pack))
+                    break
 
-            batches.append(batch)
+                accompanying_order = select_accompanying_order(temp_batch, temp_order_pool, df, order_id_df)
+                temp_weight_of_cart = weight_of_cart + order_pool[order_pool['order_id']==accompanying_order].iloc[0]['total_weight']
+
+                if temp_weight_of_cart < self.capacity:
+                    temp_batch.append(accompanying_order)
+                    temp_order_pool = temp_order_pool.drop(temp_order_pool[temp_order_pool['order_id']==accompanying_order].iloc[0].name)
+                    weight_of_cart = temp_weight_of_cart
+
+                else:
+                    temp_picking_time = find_picking_time(temp_batch, weight_of_cart, order_id_df, self.W, self.L, self.v_travel)
+
+                    situation = find_situation(picking_time_list, packing_time_list,
+                                               temp_picking_time)
+
+                    # consider current situation
+                    if situation == 'blocking':
+                        rule_X = 'rule_B'
+                    else:
+                        rule_X = 'rule_A'
+                        batch = temp_batch
+                        current_order_pool = temp_order_pool
+                        picking_time_list.append(find_picking_time(batch, weight_of_cart, order_id_df, self.W, self.L, self.v_travel))
+                        packing_time_list.append(find_packing_time(batch, weight_of_cart, order_pool, self.t_scan, self.t_pack))
+
+                    break
+
+            # check if batch contains orders
+            if len(batch) > 0:
+                batches.append(batch)
+                self.current_num_of_aisle = None
         
-        print(batches)
+        C_max = sum(packing_time_list) + picking_time_list[0]
+        num_of_item_in_batches = 0
+        for i in batches:
+            num_of_item_in_batches += len(i)
+
+        print(f'picking_time_list: {picking_time_list, len(picking_time_list)}')
+        print(f'packing_time_list: {packing_time_list, len(packing_time_list)}')
+        print(f'C_max: {C_max}')
+        print(batches, len(batches))
+        print(num_of_item_in_batches)
 
         return batches
 
+
+    def select_seed_order(self, batches, order_pool, temp_order_pool, rule_X):
+
+        seed_order = None
+        if rule_X == 'rule_B':
+            if self.current_num_of_aisle is None:
+                last_seed_order = order_pool[order_pool['order_id']==batches[-1][0]]
+                print(last_seed_order)
+                self.current_num_of_aisle = last_seed_order.iloc[0].num_of_aisle
+
+            self.current_num_of_aisle += 1
+            if self.current_num_of_aisle > 5:
+                self.current_num_of_aisle = 1
+
+            same_aisle_orders = temp_order_pool[temp_order_pool['num_of_aisle']==self.current_num_of_aisle]
+            if len(same_aisle_orders) > 0:
+                seed_order = same_aisle_orders.iloc[0]['order_id']
+                temp_order_pool = temp_order_pool.drop(same_aisle_orders.iloc[0].name)
+        else:
+            seed_order = temp_order_pool.iloc[0]['order_id']
+            temp_order_pool = temp_order_pool.drop(temp_order_pool.iloc[0].name)
+
+        return seed_order, temp_order_pool
 
 if __name__ == "__main__":
     df = pd.read_csv('data/order_data.csv')
