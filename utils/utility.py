@@ -64,7 +64,7 @@ def find_packing_time(batch, weight_of_cart, order_pool, t_scan, t_pack):
     return packing_time
 
 
-def find_situation(picking_time_list, packing_time_list, temp_picking_time):
+def check_situation(picking_time_list, packing_time_list, temp_picking_time):
 
     Cn_1 = sum(picking_time_list) + temp_picking_time
     if len(picking_time_list) == 0:
