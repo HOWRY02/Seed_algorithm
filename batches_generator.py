@@ -154,5 +154,5 @@ class BatchesGenerator():
 
 if __name__ == "__main__":
     df = pd.read_csv('data/order_data.csv')
-    paper_ocr = BatchesGenerator()
-    batch = paper_ocr.generate_batches(df)
+    batches_generator = BatchesGenerator()
+    batches = batches_generator.generate_batches(df)
