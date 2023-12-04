@@ -47,9 +47,9 @@ def find_picking_time(batch, weight_of_cart, order_id_df, W, L, v_travel):
     max_ki = batch_info.ki.max()
     Qb = batch_info.ki.unique().shape[0]
 
-    picking_time = (2*(max_ki-1)*W + 2*Qb*L)/v_travel + 6*weight_of_cart
+    picking_time = (2*(max_ki-1)*W + Qb*L)/v_travel + 6*weight_of_cart
 
-    return picking_time
+    return picking_time, max_ki, Qb
 
 
 def find_packing_time(batch, weight_of_cart, order_pool, t_scan, t_pack):
@@ -61,21 +61,49 @@ def find_packing_time(batch, weight_of_cart, order_pool, t_scan, t_pack):
 
     packing_time = len(batch)*t_pack + total_item_of_batch*t_scan
 
-    return packing_time
+    return packing_time, total_item_of_batch
 
+
+# def check_situation(picking_time_list, packing_time_list, temp_picking_time):
+
+#     # Cn_1 = sum(picking_time_list) + temp_picking_time
+#     # if len(picking_time_list) == 0:
+#     #     Cn1_2 = 0
+#     #     Cn2_2 = 0
+#     # elif len(picking_time_list) == 1:
+#     #     Cn1_2 = picking_time_list[0]
+#     #     Cn2_2 = 0
+#     # else:
+#     #     Cn1_2 = sum(packing_time_list) + picking_time_list[0]
+#     #     Cn2_2 = sum(packing_time_list[:-1]) + picking_time_list[0]
+
+#     current_situation = None
+
+#     if Cn_1 < Cn2_2:
+#         current_situation = 'blocking'
+#     elif Cn2_2 < Cn_1 and Cn_1 < Cn1_2:
+#         current_situation = 'coordination'
+#     else:
+#         current_situation = 'starving'
+
+#     return current_situation
 
 def check_situation(picking_time_list, packing_time_list, temp_picking_time):
 
-    Cn_1 = sum(picking_time_list) + temp_picking_time
+    # Cn_1 = picking_time_list[-1] + temp_picking_time
+
     if len(picking_time_list) == 0:
+        Cn_1 = temp_picking_time
         Cn1_2 = 0
         Cn2_2 = 0
     elif len(picking_time_list) == 1:
-        Cn1_2 = picking_time_list[0]
+        Cn_1 = picking_time_list[-1] + temp_picking_time
+        Cn1_2 = packing_time_list[-1]
         Cn2_2 = 0
     else:
-        Cn1_2 = sum(packing_time_list) + picking_time_list[0]
-        Cn2_2 = sum(packing_time_list[:-1]) + picking_time_list[0]
+        Cn_1 = picking_time_list[-1] + temp_picking_time
+        Cn1_2 = packing_time_list[-1]
+        Cn2_2 = packing_time_list[-2]
 
     current_situation = None
 
@@ -88,3 +116,16 @@ def check_situation(picking_time_list, packing_time_list, temp_picking_time):
 
     return current_situation
 
+def find_completion_time(picking_time_list, packing_time_list, picking_time, packing_time):
+
+    if len(picking_time_list) == 0:
+        Cn_1 = picking_time
+        Cn_2 = Cn_1 + packing_time
+    else:
+        Cn_1 = picking_time_list[-1] + picking_time
+        Cn_2 = max(Cn_1,packing_time_list[-1]) + packing_time
+
+    picking_time_list.append(Cn_1)
+    packing_time_list.append(Cn_2)
+
+    return picking_time_list, packing_time_list

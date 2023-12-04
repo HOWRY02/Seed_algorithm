@@ -1,5 +1,5 @@
 import pandas as pd
-from utils.utility import preprocess_order, select_accompanying_order, check_situation, find_picking_time, find_packing_time
+from utils.utility import preprocess_order, select_accompanying_order, check_situation, find_picking_time, find_packing_time, find_time
 
 class BatchesGenerator():
     __instance__ = None
@@ -18,11 +18,11 @@ class BatchesGenerator():
             BatchesGenerator.__instance__ == self
 
             # center-to-center distance between two aisle (m)
-            self.W = 2
+            self.W = 1.2
             # length of aisle (m)
             self.L = 3
             # traveling speed of pickers (m/s)
-            self.v_travel = 0.5
+            self.v_travel = 0.3
             # scanning time of each item (s)
             self.t_scan = 2
             # packing time of each order (s)
@@ -52,6 +52,10 @@ class BatchesGenerator():
         # set list of time
         picking_time_list = []
         packing_time_list = []
+        max_ki_list = []
+        Qb_list = []
+        total_item_of_batch_list = []
+        weight_of_cart_list = []
 
         while len(current_order_pool) > 0:
 
@@ -75,10 +79,16 @@ class BatchesGenerator():
                 if len(temp_order_pool) == 0:
                     batch = temp_batch
                     current_order_pool = temp_order_pool
-                    picking_time_list.append(find_picking_time(batch, weight_of_cart, order_id_df,
-                                                               self.W, self.L, self.v_travel))
-                    packing_time_list.append(find_packing_time(batch, weight_of_cart, order_pool,
-                                                               self.t_scan, self.t_pack))
+                    picking_time, max_ki, Qb = find_picking_time(batch, weight_of_cart, order_id_df,
+                                                               self.W, self.L, self.v_travel)
+                    packing_time, total_item_of_batch = find_packing_time(batch, weight_of_cart, order_pool,
+                                                               self.t_scan, self.t_pack)
+
+                    picking_time_list, packing_time_list = find_time(picking_time_list, packing_time_list, picking_time, packing_time)
+                    max_ki_list.append(max_ki)
+                    Qb_list.append(Qb)
+                    total_item_of_batch_list.append(total_item_of_batch)
+                    weight_of_cart_list.append(weight_of_cart)
                     break
 
                 accompanying_order = select_accompanying_order(temp_batch, temp_order_pool, df, order_id_df)
@@ -90,7 +100,7 @@ class BatchesGenerator():
                     weight_of_cart = temp_weight_of_cart
 
                 else:
-                    temp_picking_time = find_picking_time(temp_batch, weight_of_cart, order_id_df,
+                    temp_picking_time, max_ki, Qb = find_picking_time(temp_batch, weight_of_cart, order_id_df,
                                                           self.W, self.L, self.v_travel)
 
                     situation = check_situation(picking_time_list, packing_time_list,
@@ -103,10 +113,15 @@ class BatchesGenerator():
                         rule_X = 'rule_A'
                         batch = temp_batch
                         current_order_pool = temp_order_pool
-                        picking_time_list.append(find_picking_time(batch, weight_of_cart, order_id_df,
-                                                                   self.W, self.L, self.v_travel))
-                        packing_time_list.append(find_packing_time(batch, weight_of_cart, order_pool,
-                                                                   self.t_scan, self.t_pack))
+                        picking_time, max_ki, Qb = find_picking_time(batch, weight_of_cart, order_id_df,
+                                                                   self.W, self.L, self.v_travel)
+                        packing_time, total_item_of_batch = find_packing_time(batch, weight_of_cart, order_pool,
+                                                                   self.t_scan, self.t_pack)
+                        picking_time_list, packing_time_list = find_time(picking_time_list, packing_time_list, picking_time, packing_time)
+                        max_ki_list.append(max_ki)
+                        Qb_list.append(Qb)
+                        total_item_of_batch_list.append(total_item_of_batch)
+                        weight_of_cart_list.append(weight_of_cart)
 
                     break
 
@@ -115,18 +130,21 @@ class BatchesGenerator():
                 batches.append(batch)
                 self.current_num_of_aisle = None
         
-        
         # num_of_item_in_batches = 0
         # for i in batches:
         #     num_of_item_in_batches += len(i)
-        # C_max = sum(packing_time_list) + picking_time_list[0]
+        # C_max = packing_time_list[-1]
         # print(f'picking_time_list: {picking_time_list, len(picking_time_list)}')
         # print(f'packing_time_list: {packing_time_list, len(packing_time_list)}')
+        # print(f'max_ki_list: {max_ki_list}')
+        # print(f'Qb_list: {Qb_list}')
+        # print(f'total_item_of_batch_list: {total_item_of_batch_list}')
+        # print(f'weight_of_cart_list: {weight_of_cart_list}')
         # print(f'C_max: {C_max}')
         # print(batches, len(batches))
         # print(num_of_item_in_batches)
 
-        return batches, picking_time_list, packing_time_list
+        return batches, picking_time_list, packing_time_list, [max_ki_list, Qb_list, total_item_of_batch_list, weight_of_cart_list]
 
 
     def select_seed_order(self, batches, order_pool, temp_order_pool, rule_X):
