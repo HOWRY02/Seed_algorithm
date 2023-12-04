@@ -1,5 +1,5 @@
 import pandas as pd
-from utils.utility import preprocess_order, select_accompanying_order, check_situation, find_picking_time, find_packing_time, find_time
+from utils.utility import preprocess_order, select_accompanying_order, check_situation, find_picking_time, find_packing_time, find_completion_time
 
 class BatchesGenerator():
     __instance__ = None
@@ -84,7 +84,7 @@ class BatchesGenerator():
                     packing_time, total_item_of_batch = find_packing_time(batch, weight_of_cart, order_pool,
                                                                self.t_scan, self.t_pack)
 
-                    picking_time_list, packing_time_list = find_time(picking_time_list, packing_time_list, picking_time, packing_time)
+                    picking_time_list, packing_time_list = find_completion_time(picking_time_list, packing_time_list, picking_time, packing_time)
                     max_ki_list.append(max_ki)
                     Qb_list.append(Qb)
                     total_item_of_batch_list.append(total_item_of_batch)
@@ -117,7 +117,7 @@ class BatchesGenerator():
                                                                    self.W, self.L, self.v_travel)
                         packing_time, total_item_of_batch = find_packing_time(batch, weight_of_cart, order_pool,
                                                                    self.t_scan, self.t_pack)
-                        picking_time_list, packing_time_list = find_time(picking_time_list, packing_time_list, picking_time, packing_time)
+                        picking_time_list, packing_time_list = find_completion_time(picking_time_list, packing_time_list, picking_time, packing_time)
                         max_ki_list.append(max_ki)
                         Qb_list.append(Qb)
                         total_item_of_batch_list.append(total_item_of_batch)
